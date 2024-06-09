@@ -59,5 +59,5 @@ sudo python3 HCI.py --key <ADVERTISMENT_KEY>
 
 Tagalong 8bit implementataion:
 ```bash
-sudo python3 HCI.py --key <ADVERTISMENT_KEY>
+sudo python3 Raspi-1byte.py
 ```
