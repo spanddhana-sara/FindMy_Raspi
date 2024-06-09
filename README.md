@@ -11,16 +11,16 @@ This repo is a modified version of the original TagAlong protocol.
 
 The firmware can write up to 8 bits per advertistment, starting from the LSB. If the data to send is more than the number of bits per advertistment, the program will send another message with the next fragement of data in the next avaliable position in the public key. If the whole data segment of the public key is used up, the new data fragment will wrap around to the LSB and XOR with the existing data.
 
-Datafetcher
+_**Datafetcher**_
 
 Add logging to file
 Add retrieval of multiple messages and fixed interval repeated reterival
 Improved performance of data fetching
 Datafetcher is fixed to allow fetching of 8 bits per message.
 
-How to use
+_**How to use**_
 
-ESP32C3 Firmware
+**ESP32C3 Firmware**
 
 Install ESP-IDF https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/
 Mofidy the firmware by changing the modem_id, current_message_id and data_to_send
@@ -43,7 +43,7 @@ Fetch uploaded messages
 
 
 
-Linux Support
+**Linux Support**
 
 The script requires a Linux machine with a Bluetooth Low Energy radio chip, a Python environment, and hcitool installed. We tested it on a Raspberry Pi running the official Raspberry Pi OS.
 
@@ -56,4 +56,5 @@ You can copy the required ADVERTISMENT_KEY from the app by right-clicking on you
 sudo python3 HCI.py --key <ADVERTISMENT_KEY>
 
 Tagalong 8bit implementataion:
+
 sudo python3 HCI.py --key <ADVERTISMENT_KEY>
