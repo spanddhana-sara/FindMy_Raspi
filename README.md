@@ -53,8 +53,11 @@ The Python script uses HCI calls to configure Bluetooth advertising.
 To use as openhaystack device: 
 You can copy the required ADVERTISMENT_KEY from the app by right-clicking on your accessory and selecting Copy advertisement key (Base64). Then run the script:
 
+```bash
 sudo python3 HCI.py --key <ADVERTISMENT_KEY>
+```
 
 Tagalong 8bit implementataion:
-
+```bash
 sudo python3 HCI.py --key <ADVERTISMENT_KEY>
+```
