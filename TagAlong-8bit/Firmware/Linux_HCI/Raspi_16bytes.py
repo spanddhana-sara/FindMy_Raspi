@@ -71,7 +71,7 @@ curr_addr = start_addr.copy()
 
 
 # Constants
-modem_id = 0xdeadbeef  # Example modem ID
+modem_id = 0x50135013  # Example modem ID
 start_addr = [0] * 16  # Example start address
 curr_addr = start_addr.copy()
 modem_bytearray = bytearray(4) # Initialize modem_id as a bytearray of 4 bytes
@@ -122,33 +122,53 @@ def set_addr_and_payload_for_byte(index,  msg_id, val, chunk_len):
 
     return public_key
     
-def send_data_once_blocking(data_to_send,  chunk_len, msg_id):
-    len_bytes = len(data_to_send)
-    num_chunks = len_bytes * 8 // chunk_len
-    if len_bytes * 8 % chunk_len:
-        num_chunks += 1
-    
-    for chunk_i in range(num_chunks):
-        chunk_value = 0
-        start_bit = chunk_i * chunk_len
-        end_bit = start_bit + chunk_len
-        
-        start_byte = start_bit // 8
-        start_bit_offset = start_bit % 8
+def send_data(data_to_send, chunk_len, msg_id):
+    def send_data_once_blocking(data_segment, chunk_len, msg_id):
+        len_bytes = len(data_segment)
+        num_chunks = len_bytes * 8 // chunk_len
+        if len_bytes * 8 % chunk_len:
+            num_chunks += 1
 
-        bits_in_first_byte = min(8 - start_bit_offset, chunk_len)
-        chunk_value = (data_to_send[start_byte] >> start_bit_offset) & ((1 << bits_in_first_byte) - 1)
+        for chunk_i in range(num_chunks):
+            chunk_value = 0
+            start_bit = chunk_i * chunk_len
+            end_bit = start_bit + chunk_len
 
-        remaining_bits = chunk_len - bits_in_first_byte
-        while remaining_bits > 0:
-            start_byte += 1
-            bits_to_extract = min(remaining_bits, 8)
-            chunk_value |= (data_to_send[start_byte] & ((1 << bits_to_extract) - 1)) << bits_in_first_byte
-            bits_in_first_byte += bits_to_extract
-            remaining_bits -= bits_to_extract
+            start_byte = start_bit // 8
+            start_bit_offset = start_bit % 8
 
-        return set_addr_and_payload_for_byte(chunk_i, msg_id, chunk_value, chunk_len)
-        
+            bits_in_first_byte = min(8 - start_bit_offset, chunk_len)
+            chunk_value = (data_segment[start_byte] >> start_bit_offset) & ((1 << bits_in_first_byte) - 1)
+
+            remaining_bits = chunk_len - bits_in_first_byte
+            while remaining_bits > 0:
+                start_byte += 1
+                bits_to_extract = min(remaining_bits, 8)
+                chunk_value |= (data_segment[start_byte] & ((1 << bits_to_extract) - 1)) << bits_in_first_byte
+                bits_in_first_byte += bits_to_extract
+                remaining_bits -= bits_to_extract
+
+            return set_addr_and_payload_for_byte(chunk_i, msg_id, chunk_value, chunk_len)
+
+    segment_size = 16  # 16 bytes
+
+    if len(data_to_send) <= segment_size:
+        # Data is 16 bytes or less
+        print("Data is 16 bytes or less")
+        return send_data_once_blocking(data_to_send, chunk_len, msg_id)
+    else:
+        # Data exceeds 16 bytes
+        print("Data exceeds 16 bytes")
+        total_segments = (len(data_to_send) + segment_size - 1) // segment_size
+
+        for segment_index in range(total_segments):
+            start_index = segment_index * segment_size
+            end_index = min(start_index + segment_size, len(data_to_send))
+            segment = data_to_send[start_index:end_index]
+
+            print(f"Sending segment {segment_index + 1}/{total_segments}: {segment.hex()}")
+            return send_data_once_blocking(segment, chunk_len, msg_id + segment_index)
+
    
 
 def run_hci_cmd(cmd, hci="hci0", wait=1):
@@ -206,7 +226,7 @@ def main(args):
 
     # Initialize current message ID and message data
     current_message_id = 1
-    data_to_send = b'A'
+    data_to_send = b'ABC'
 
     # Print message bytes
     print("Bytes:", ' '.join([f"{byte:02x}" for byte in data_to_send]))
@@ -215,8 +235,9 @@ def main(args):
     for _ in range(NUM_MESSAGES):
         current_message_id += 1
         for _ in range(REPEAT_MESSAGE_TIMES):
-            key = send_data_once_blocking(data_to_send, 8, current_message_id)
+            key = send_data(data_to_send, 8, current_message_id)
             start_advertising(key)
+            
     
 
 
