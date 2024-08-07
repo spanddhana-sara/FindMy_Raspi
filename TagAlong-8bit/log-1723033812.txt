@@ -1,0 +1,8 @@
+Parsed Modem ID: 1616928864; 60606060
+Chunk Length: 8; 8
+Time to repeat search, in seconds: 0
+Number of messages to automatically fetch: 2
+Time Stamp: Message 2 Time: 1723034046
+Result: Message 2 No Report Found
+Time Stamp: Message 3 Time: 1723034050
+Result: Message 3 No Report Found

@@ -238,7 +238,7 @@ struct Message: Codable {
 
 struct DataEncodingKey: Codable, Hashable {
   let index: UInt32
-  var value: UInt8
+  var value: UInt16
   /// The advertising key
   var advertisedKey: [UInt8]
   /// Hashed advertisement key using SHA256

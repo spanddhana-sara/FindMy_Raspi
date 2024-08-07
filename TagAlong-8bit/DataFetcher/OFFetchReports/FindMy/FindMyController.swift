@@ -101,7 +101,7 @@ class FindMyController: ObservableObject {
 
     var m = self.messages[messageID]!
     //m.keys = []
-    let chunkLength = m.chunkLength
+    let chunkLength = m.chunkLength * 2
     let decoded: [UInt8]
 
     if m.decodedBytes != nil{
@@ -112,25 +112,28 @@ class FindMyController: ObservableObject {
 
     let recovered: [UInt8] = xorArrays(a: startKey, b: decoded)
         
-    for val in 0..<Int(pow(Double(2), Double(chunkLength))) {
+      for val in 0..<Int(pow(Double(2), Double(chunkLength))) {
       var validKeyCounter: UInt16 = 0
       var adv_key = [UInt8]()
-      
+        
+       
       let offsetValLen = chunkLength * (startChunk + 1)
       var offsetValChunks = (offsetValLen / 8)
       let leftover = (offsetValLen) % 8
       if (leftover) != 0 { offsetValChunks += 1 }
       var offsetVal = Array(repeating: UInt8(0x0), count: Int(offsetValChunks))
       
-      let mask = chunkLength == 8 ? UInt8(255) : UInt8(1 << chunkLength)
+      let mask = chunkLength == 16 ? UInt16(65535) : UInt16(1 << chunkLength)
       
       if (leftover == 0) {
-          offsetVal[0] = UInt8(val) << (8 - chunkLength)
+          offsetVal[0] = UInt8((val >> 8) & 0xFF)
+          offsetVal[1] = UInt8(val & 0xFF)
       } else if (leftover < chunkLength) {
-          offsetVal[1] = UInt8(val) << (8 - (chunkLength - leftover))
-          offsetVal[0] = UInt8(val) >> (chunkLength - leftover)
+          offsetVal[1] = UInt8(((val >> 8) & 0xFF) << (8 - (chunkLength - leftover)))
+          offsetVal[0] = UInt8((val & 0xFF) >> (chunkLength - leftover))
       } else {
-          offsetVal[0] = UInt8(val) << (leftover - chunkLength)
+          offsetVal[0] =  UInt8((val >> 8) & 0xFF) << (leftover - chunkLength)
+          offsetVal[1] = UInt8(val & 0xFF)
       }
       
       //print("offsetVal: " + String(describing: offsetVal))
@@ -151,7 +154,7 @@ class FindMyController: ObservableObject {
     //key_hex += "\n"
     print("Valid key: \(key_hex)")
     //print("Found valid pub key on \(validKeyCounter). try")
-    let k = DataEncodingKey(index: UInt32(startChunk), value: UInt8(val), advertisedKey: adv_key, hashedKey: SHA256.hash(data: adv_key).data)
+    let k = DataEncodingKey(index: UInt32(startChunk), value: UInt16(val), advertisedKey: adv_key, hashedKey: SHA256.hash(data: adv_key).data)
     m.keys.append(k)
 //      print(Data(adv_key).base64EncodedString())
   }
@@ -173,7 +176,7 @@ class FindMyController: ObservableObject {
   ) {
     
     self.modemID = modemID
-    self.chunkLength = chunkLength
+    self.chunkLength = chunkLength * 2
     let start_index: UInt32 = 0
     let message_finished = false;
     let m = Message(modemID: modemID, messageID: UInt32(messageID), chunkLength: chunkLength)
@@ -260,26 +263,28 @@ class FindMyController: ObservableObject {
 
       //print(keyMap)
       //print(reportMap)
-      var result = [UInt32: UInt8]()
+      var result = [UInt32: UInt16]()
       var earlyExit = false
         let chunkLength = message!.chunkLength
       for (report_id, count) in reportMap {
         guard let k = keyMap[report_id] else { print("FATAL ERROR"); return; }
           if (result[k.index] != nil) {
-              let cLen = message!.chunkLength
+              let cLen = message!.chunkLength * 2
               let leftover = ((k.index + 1) * cLen) % 8
-              var startVal: UInt8
-              let mask = cLen == 8 ? UInt8(255) : UInt8(1 << cLen)
-              if (leftover == 0) {
-                  startVal = (startKey[(Int(((k.index + 1) * cLen)) / 8) - 1] >> (8 - cLen)) & mask
-              } else if (leftover < cLen) {
-                  let val_lo = startKey[Int(((k.index + 1) * cLen)) / 8] << (cLen - leftover)
-                  let val_hi = startKey[(Int(((k.index + 1) * cLen)) / 8) - 1] >> leftover
-                  startVal = (val_lo ^ val_hi) & mask
-              } else {
-                  startVal = (startKey[(Int(((k.index + 1) * cLen)) / 8) - 1] >> (leftover - cLen)) & mask
-              }
-              
+              var startVal: UInt16
+              let mask = cLen == 16 ? UInt16(65535) : UInt16(1 << cLen)
+              let startIndex = (k.index + 1) * cLen / 8
+              let shiftBits = cLen - leftover
+
+              if leftover == 0 {
+                  startVal = (UInt16(startKey[Int(startIndex) - 1]) >> (8 - cLen)) & mask
+                  } else if leftover < cLen {
+                      let val_lo = UInt16(startKey[Int(startIndex)]) << shiftBits
+                      let val_hi = UInt16(startKey[Int(startIndex) - 1]) >> leftover
+                      startVal = (val_lo | val_hi) & mask
+                  } else {
+                      startVal = (UInt16(startKey[Int(startIndex) - 1]) >> (leftover - cLen)) & mask
+                  }
               if (startVal != k.value) {
                   result[k.index] = k.value
               }
@@ -294,6 +299,7 @@ class FindMyController: ObservableObject {
       var workingBitStr: String
       var decodedBits : String
       var decodedStr: String
+      
         
       if message!.workingBitStr != nil {
           workingBitStr  = message!.workingBitStr!
@@ -335,7 +341,7 @@ class FindMyController: ObservableObject {
       } else {
           chunk_completely_invalid = 0
           var bitStr = String(val!, radix: 2)
-          var bitStrPadded = pad(string: bitStr, toSize: Int(chunkLength))
+          var bitStrPadded = pad(string: bitStr, toSize: Int(chunkLength) * 2)
           workingBitStr = bitStrPadded + workingBitStr
           print("Working bit string: " + workingBitStr)
           print("Old decoded bits: " + decodedBits)
@@ -343,7 +349,9 @@ class FindMyController: ObservableObject {
           print("New decoded bits: " + decodedBits)
       }
       //let (quotient, remainder) = workingBitStr.count.quotientAndRemainder(dividingBy: 8)
-        if (workingBitStr.count >  8) { // End of byte
+        // if (workingBitStr.count >  8) { // End of byte
+        while (workingBitStr.count >  7) { // End of byte
+
         if chunk_completely_invalid == 1 {
           logAndPrint("Result: Message \(messageID) No Report Found" , fileHandle: logger)
           print("Chunk invalid")
@@ -388,6 +396,7 @@ class FindMyController: ObservableObject {
             var byte = Int(strtoul(substr, nil, 2))
             decodedBytes.append(UInt8(byte))
         }
+       
       logAndPrint("Result: Message \(messageID) bitstring: \(decodedStr) bytestring: \(decodedBytes)" , fileHandle: logger)
       message?.decodedBytes = decodedBytes
       message?.decodedStr = decodedStr

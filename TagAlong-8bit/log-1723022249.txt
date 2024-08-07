@@ -1,0 +1,11 @@
+Parsed Modem ID: 3735928559; deadbeef
+Chunk Length: 8; 8
+Time to repeat search, in seconds: 0
+Number of messages to automatically fetch: 1
+Time Stamp: Message 0 Time: 1723022254
+Result: Message 0 bitstring:  bytestring: [67]
+Time Stamp: Message 0 Time: 1723022257
+Result: Message 0 bitstring: C bytestring: [0, 67]
+Time Stamp: Message 0 Time: 1723022259
+Result: Message 0 bitstring: C bytestring: [0, 0, 67]
+Time Stamp: Message 2 Time: 1723022455
