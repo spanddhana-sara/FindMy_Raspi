@@ -232,6 +232,7 @@ struct Message: Codable {
   var decodedBits: String?
   var decodedBytes: [UInt8]?
   var decodedStr: String?
+  var decimalInteger: Int?
 }
 
 

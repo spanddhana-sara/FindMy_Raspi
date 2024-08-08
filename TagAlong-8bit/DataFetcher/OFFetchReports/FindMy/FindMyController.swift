@@ -245,8 +245,16 @@ class FindMyController: ObservableObject {
       }
     }
 
-  
-
+    func binaryStringToDecimal(binaryString: String) -> Int? {
+        // Check if the string is a valid binary string
+        guard binaryString.allSatisfy({ $0 == "0" || $0 == "1" }) else {
+            print("Invalid binary string")
+            return nil
+        }
+        
+        // Convert binary string to a decimal value
+        return Int(binaryString, radix: 2)
+    }
     func decodeReports(messageID: UInt32, with searchPartyToken: Data, logger: FileHandle, completion: @escaping (Error?) -> Void) {
       print("Decoding reports")
 
@@ -277,7 +285,7 @@ class FindMyController: ObservableObject {
               let shiftBits = cLen - leftover
 
               if leftover == 0 {
-                  startVal = (UInt16(startKey[Int(startIndex) - 1]) >> (8 - cLen)) & mask
+                  startVal = (UInt16(startKey[Int(startIndex) - 1]) >> (16 - cLen)) & mask
                   } else if leftover < cLen {
                       let val_lo = UInt16(startKey[Int(startIndex)]) << shiftBits
                       let val_hi = UInt16(startKey[Int(startIndex) - 1]) >> leftover
@@ -300,6 +308,7 @@ class FindMyController: ObservableObject {
       var decodedBits : String
       var decodedStr: String
       
+      
         
       if message!.workingBitStr != nil {
           workingBitStr  = message!.workingBitStr!
@@ -321,6 +330,7 @@ class FindMyController: ObservableObject {
       else {
           decodedStr = ""
       }
+     
         
 //      var workingBitStr = message!.workingBitStr!
 //      var decodedBits = message!.decodedBits!
@@ -347,6 +357,8 @@ class FindMyController: ObservableObject {
           print("Old decoded bits: " + decodedBits)
           decodedBits = bitStrPadded + decodedBits
           print("New decoded bits: " + decodedBits)
+          let decimal = Int(strtoul(workingBitStr, nil, 2))
+          logAndPrint("Decimal Value: \(Int(decimal))", fileHandle: logger)
       }
       //let (quotient, remainder) = workingBitStr.count.quotientAndRemainder(dividingBy: 8)
         // if (workingBitStr.count >  8) { // End of byte
@@ -363,10 +375,19 @@ class FindMyController: ObservableObject {
             if (valid_byte == 0) {
                 earlyExit = true
             } else {
-          workingBitStr = String(workingBitStr.dropLast(8))
+          
           print("Full byte \(valid_byte)")
-          let str_byte = String(bytes: [valid_byte], encoding: .utf8)
-          decodedStr = (str_byte ?? "?") + decodedStr
+          //let str_byte = String(bytes: [valid_byte], encoding: .utf8)
+                if let str_byte = String(bytes: [valid_byte], encoding: .utf8) {
+                    decodedStr = (str_byte ?? "?") + decodedStr  // Return the ASCII character if valid
+                    } else {
+                       let decimal = Int(strtoul(workingBitStr, nil, 2))
+                        print("Decimal: \(decimal)")// Return the decimal value as a string if not valid
+                        logAndPrint("Decimal Value: \(Int(decimal))", fileHandle: logger)
+                    }           // Return the ASCII character if valid
+                
+                //decodedStr = (str_byte ?? "?") + decodedStr
+          workingBitStr = String(workingBitStr.dropLast(8))
             }
         }
         else {
@@ -390,6 +411,8 @@ class FindMyController: ObservableObject {
         }
         print(decodedBits)
         
+        Int(strtoul(decodedBits, nil, 2))
+        
         var leng = Int(decodedBits.count / 8)
         for i in 0..<leng {
             var substr = String(decodedBits.dropFirst(i * 8).prefix(8))
@@ -397,7 +420,7 @@ class FindMyController: ObservableObject {
             decodedBytes.append(UInt8(byte))
         }
        
-      logAndPrint("Result: Message \(messageID) bitstring: \(decodedStr) bytestring: \(decodedBytes)" , fileHandle: logger)
+      logAndPrint("Result: Message \(messageID) bitstring: \(decodedStr) decimal value: \(Int(strtoul(decodedBits, nil, 2))) bytestring: \(decodedBytes)" , fileHandle: logger)
       message?.decodedBytes = decodedBytes
       message?.decodedStr = decodedStr
         
